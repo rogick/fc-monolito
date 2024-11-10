@@ -1,10 +1,13 @@
+import Address from "../../@shared/domain/value-object/address";
+import Id from "../../@shared/domain/value-object/id.value-object";
 import Invoice from "../domain/invoice";
+import InvoiceItem from "../domain/invoice.items";
 import InvoiceGateway from "../gateway/invoice.gatewat";
 import InvoiceModel from "./invoice.model";
 import InvoiceItemModel from "./invoice.model.item";
 
 export default class InvoiceRepository implements InvoiceGateway {
-
+  
   async create(entity: Invoice): Promise<void> {
     await InvoiceModel.create(
       {
@@ -33,4 +36,38 @@ export default class InvoiceRepository implements InvoiceGateway {
       }
     );
   }
+
+  async find(id: any): Promise<Invoice> {
+    const invoice = await InvoiceModel.findOne({ where: { id }, include: [{ model: InvoiceItemModel }]});
+
+    if (!invoice) {
+      throw new Error("Invoice not found")
+    }
+
+    return new Invoice({
+      id: new Id(invoice.id),
+      name: invoice.name,
+      document: invoice.document,
+      address: new Address(
+        invoice.street,
+        invoice.number,
+        invoice.complement,
+        invoice.city,
+        invoice.state,
+        invoice.zipCode,
+      ),
+      items: invoice.items.map((item) => {
+        return new InvoiceItem({
+                      id: new Id(item.id),
+                      name: item.name,
+                      price: item.price,
+                      createdAt: item.createdAt,
+                      updatedAt: item.updatedAt
+                    })
+      }),
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt
+    })
+  }
+
 }
